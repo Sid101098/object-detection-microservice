@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ui_backend:
+    build: ./ui_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./ui_backend/static/uploads:/app/static/uploads
+    depends_on:
+      - ai_backend
+    environment:
+      - FLASK_ENV=development
+
+  ai_backend:
+    build: ./ai_backend
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+    # For GPU support, uncomment the following lines:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
