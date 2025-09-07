@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Object Detection Microservice</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .upload-form { margin: 20px 0; }
+        .result { margin-top: 20px; }
+        .image-container { margin: 20px 0; }
+        img { max-width: 100%; height: auto; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Object Detection Microservice</h1>
+    
+    <div class="upload-form">
+        <input type="file" id="imageInput" accept="image/*">
+        <button onclick="uploadImage()">Detect Objects</button>
+    </div>
+    
+    <div id="loading" style="display: none;">Processing...</div>
+    
+    <div id="result" class="result" style="display: none;">
+        <h2>Detection Results</h2>
+        <div class="image-container">
+            <img id="outputImage" src="" alt="Detection Result">
+        </div>
+        
+        <h3>Detected Objects:</h3>
+        <table id="detectionTable">
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Confidence</th>
+                    <th>Bounding Box</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        
+        <p><strong>Total Objects:</strong> <span id="totalObjects">0</span></p>
+        
+        <div>
+            <a id="jsonDownload" href="#" download>Download JSON Results</a>
+        </div>
+    </div>
+    
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an image file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResults(result);
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error uploading image: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function displayResults(result) {
+            // Display output image
+            if (result.output_image_url) {
+                document.getElementById('outputImage').src = result.output_image_url;
+            }
+            
+            // Display detection results
+            const tableBody = document.querySelector('#detectionTable tbody');
+            tableBody.innerHTML = '';
+            
+            result.detections.forEach(detection => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = detection.class;
+                row.insertCell(1).textContent = (detection.confidence * 100).toFixed(2) + '%';
+                row.insertCell(2).textContent = 
+                    `[${detection.bbox.x1.toFixed(1)}, ${detection.bbox.y1.toFixed(1)}, 
+                     ${detection.bbox.x2.toFixed(1)}, ${detection.bbox.y2.toFixed(1)}]`;
+            });
+            
+            document.getElementById('totalObjects').textContent = result.total_objects;
+            
+            // Set JSON download link
+            if (result.json_url) {
+                document.getElementById('jsonDownload').href = result.json_url;
+            }
+            
+            document.getElementById('result').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
